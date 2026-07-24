@@ -50,8 +50,7 @@ bytecode-only chains.
 client of choice (Cursor, Claude Code, Claude Desktop, Gemini CLI, Codex,
 OpenCode, …). We run a full Topaz node and a public **tx-indexer** — this
 guide points `gnomcp` at both, unlocking its indexer-backed tools
-(`gno_list`, `gno_history`, `gno_activity`) that the default public profile
-doesn't have.
+(`gno_history`, `gno_activity`) that the default public profile doesn't have.
 
 > ⚠️ `gnomcp` is explicitly **work-in-progress, unaudited, pre-release**
 > software (per its own README). The tool API can change and the session
@@ -65,9 +64,15 @@ doesn't have.
 | Category | Tools (examples) | Needs |
 |---|---|---|
 | Chain reads | `gno_render`, `gno_read`, `gno_eval`, `gno_packages`, `gno_account`, `gno_status` | nothing — works out of the box |
-| **Indexer reads** | `gno_list`, `gno_history`, `gno_activity` | a profile with a `tx-indexer-url` — **our profile below provides this** |
+| **Indexer reads** | `gno_history`, `gno_activity` | a profile with a `tx-indexer-url` — **our profile below provides this** |
 | Writes (dev/testnet only) | `gno_call`, `gno_run`, `gno_addpkg`, key/faucet tools | a funded agent key |
 | Sessions (WIP) | `gno_session_propose`, `gno_session_revoke` | your own `gnokey` — gnomcp never sees your mnemonic |
+
+> `gno_list` (realm catalog listing) is registered whenever an indexer is
+> configured, but as of gnomcp v0.9.0 it always returns "not supported by
+> this indexer" — it's a stub upstream, not something our indexer is
+> missing. `gno_history` and `gno_activity` are fully functional against
+> our indexer today (verified live).
 
 Plus a **`gno` skill** — a knowledge pack that teaches your agent gno.land's
 idioms, security taxonomy (`OriginSend` traps, `IsUser()` vs `IsUserCall()`),
@@ -81,7 +86,7 @@ and `Render()` conventions — and workflow skills like `gno-build`,
 | Type | Endpoint |
 |---|---|
 | **Our Topaz RPC** | `https://gnoland-topaz-rpc.hazennetworksolutions.com` |
-| **Our Topaz tx-indexer** | `https://gnoland-topaz-indexer.hazennetworksolutions.com` |
+| **Our Topaz tx-indexer (GraphQL)** | `https://gnoland-topaz-indexer.hazennetworksolutions.com/graphql/query` |
 | Official public RPC | `https://rpc.topaz.testnets.gno.land:443` |
 | Official gnoweb | `https://topaz.testnets.gno.land` |
 | Official faucet | `https://topaz.testnets.gno.land/faucet` |
@@ -89,9 +94,12 @@ and `Render()` conventions — and workflow skills like `gno-build`,
 | Our node setup guide | `https://guides.hazennetworksolutions.com/gnoland/` |
 
 Both of our endpoints are public and require no authentication. The RPC
-serves standard Tendermint2 JSON-RPC; the indexer serves
-[gnolang/tx-indexer](https://github.com/gnolang/tx-indexer) GraphQL at
-`/graphql/query`.
+serves standard Tendermint2 JSON-RPC; the indexer server
+([gnolang/tx-indexer](https://github.com/gnolang/tx-indexer)) actually
+exposes **two** APIs on the same host — plain JSON-RPC at `/` and GraphQL at
+`/graphql/query` — so the `/graphql/query` suffix above is required, not
+optional. Leaving it off silently points `gnomcp` at the JSON-RPC endpoint
+instead and its indexer tools fail.
 
 ---
 
@@ -154,7 +162,7 @@ runs:
 gnomcp profile add hazen-topaz \
   --rpc https://gnoland-topaz-rpc.hazennetworksolutions.com:443 \
   --chain-id topaz-1 \
-  --indexer-url https://gnoland-topaz-indexer.hazennetworksolutions.com
+  --indexer-url https://gnoland-topaz-indexer.hazennetworksolutions.com/graphql/query
 ```
 
 This writes to `~/.config/gnomcp/profiles.toml`. You can also edit that file
@@ -164,7 +172,7 @@ directly — same result:
 [hazen-topaz]
 rpc-url        = "https://gnoland-topaz-rpc.hazennetworksolutions.com:443"
 chain-id       = "topaz-1"
-tx-indexer-url = "https://gnoland-topaz-indexer.hazennetworksolutions.com"
+tx-indexer-url = "https://gnoland-topaz-indexer.hazennetworksolutions.com/graphql/query"
 ```
 
 Verify it loaded — ask your agent, or run:
